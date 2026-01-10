@@ -519,14 +519,24 @@ export class CanvasInteractions {
         return targetHeight / oldHeight;
     }
     handleKeyDown(e) {
+        // Always track modifier keys regardless of focus
         if (e.key === 'Control')
             this.interaction.isCtrlPressed = true;
         if (e.key === 'Meta')
             this.interaction.isMetaPressed = true;
         if (e.key === 'Shift')
             this.interaction.isShiftPressed = true;
-        if (e.key === 'Alt') {
+        if (e.key === 'Alt')
             this.interaction.isAltPressed = true;
+        // Check if canvas is focused before handling any shortcuts
+        const shouldHandle = this.canvas.isMouseOver ||
+            this.canvas.canvas.contains(document.activeElement) ||
+            document.activeElement === this.canvas.canvas;
+        if (!shouldHandle) {
+            return;
+        }
+        // Canvas-specific key handlers (only when focused)
+        if (e.key === 'Alt') {
             e.preventDefault();
         }
         if (e.key.toLowerCase() === 's') {
@@ -1157,8 +1167,7 @@ export class CanvasInteractions {
     async handlePasteEvent(e) {
         const shouldHandle = this.canvas.isMouseOver ||
             this.canvas.canvas.contains(document.activeElement) ||
-            document.activeElement === this.canvas.canvas ||
-            document.activeElement === document.body;
+            document.activeElement === this.canvas.canvas;
         if (!shouldHandle) {
             log.debug("Paste event ignored - not focused on canvas");
             return;
