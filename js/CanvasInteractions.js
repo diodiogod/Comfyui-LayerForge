@@ -1165,6 +1165,10 @@ export class CanvasInteractions {
         }
     }
     async handlePasteEvent(e) {
+        // Check if canvas is connected to DOM and visible
+        if (!this.canvas.canvas.isConnected || !document.body.contains(this.canvas.canvas)) {
+            return;
+        }
         const shouldHandle = this.canvas.isMouseOver ||
             this.canvas.canvas.contains(document.activeElement) ||
             document.activeElement === this.canvas.canvas;
