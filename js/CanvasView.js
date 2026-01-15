@@ -1044,13 +1044,20 @@ app.registerExtension({
                 log.info(`Found ${canvasNodeInstances.size} CanvasNode(s). Sending data via WebSocket...`);
                 const sendPromises = [];
                 for (const [nodeId, canvasWidget] of canvasNodeInstances.entries()) {
-                    if (app.graph.getNodeById(nodeId) && canvasWidget.canvas && canvasWidget.canvas.canvasIO) {
-                        log.debug(`Sending data for canvas node ${nodeId}`);
-                        sendPromises.push(canvasWidget.canvas.canvasIO.sendDataViaWebSocket(nodeId));
-                    }
-                    else {
+                    const node = app.graph.getNodeById(nodeId);
+                    if (!node) {
                         log.warn(`Node ${nodeId} not found in graph, removing from instances map.`);
                         canvasNodeInstances.delete(nodeId);
+                        continue;
+                    }
+                    // Skip bypassed nodes
+                    if (node.mode === 4) {
+                        log.debug(`Node ${nodeId} is bypassed, skipping data send.`);
+                        continue;
+                    }
+                    if (canvasWidget.canvas && canvasWidget.canvas.canvasIO) {
+                        log.debug(`Sending data for canvas node ${nodeId}`);
+                        sendPromises.push(canvasWidget.canvas.canvasIO.sendDataViaWebSocket(nodeId));
                     }
                 }
                 try {
