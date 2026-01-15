@@ -217,11 +217,25 @@ export class CanvasIO {
 
     async _renderOutputData(): Promise<{ image: string, mask: string }> {
         log.info("=== RENDERING OUTPUT DATA FOR COMFYUI ===");
-        
+
+        // Check if layers have valid images loaded
+        const layersWithoutImages = this.canvas.layers.filter(layer => !layer.image || !layer.image.complete);
+        if (layersWithoutImages.length > 0) {
+            log.warn(`${layersWithoutImages.length} layer(s) have incomplete image data. Waiting for images to load...`);
+            // Wait a bit for images to load
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Check again
+            const stillIncomplete = this.canvas.layers.filter(layer => !layer.image || !layer.image.complete);
+            if (stillIncomplete.length > 0) {
+                throw new Error(`Canvas not ready: ${stillIncomplete.length} layer(s) still have incomplete image data. Try clicking on a layer to force initialization, or wait a moment and try again.`);
+            }
+        }
+
         // Użyj zunifikowanych funkcji z CanvasLayers
         const imageBlob = await this.canvas.canvasLayers.getFlattenedCanvasAsBlob();
         const maskBlob = await this.canvas.canvasLayers.getFlattenedMaskAsBlob();
-        
+
         if (!imageBlob || !maskBlob) {
             throw new Error("Failed to generate canvas or mask blobs");
         }

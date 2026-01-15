@@ -1000,6 +1000,13 @@ $el("label.clipboard-switch.mask-switch", {
         resizeObserver.observe(controlsElement);
     }
 
+    // Watch the canvas container itself to detect size changes and fix canvas dimensions
+    const canvasContainerResizeObserver = new ResizeObserver(() => {
+        // Force re-read of canvas dimensions on next render
+        canvas.render();
+    });
+    canvasContainerResizeObserver.observe(canvasContainer);
+
     canvas.canvas.addEventListener('focus', () => {
         canvasContainer.classList.add('has-focus');
     });
