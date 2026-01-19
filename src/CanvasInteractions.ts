@@ -176,6 +176,9 @@ export class CanvasInteractions {
 
         document.addEventListener('paste', this.onPaste as unknown as EventListener);
 
+        // Intercept Ctrl+V during capture phase to handle layer paste before ComfyUI
+        document.addEventListener('keydown', this.onKeyDown as EventListener, { capture: true });
+
         this.canvas.canvas.addEventListener('mouseenter', this.onMouseEnter as EventListener);
         this.canvas.canvas.addEventListener('mouseleave', this.onMouseLeave as EventListener);
 
@@ -194,6 +197,9 @@ export class CanvasInteractions {
         this.canvas.canvas.removeEventListener('wheel', this.onWheel as EventListener);
         this.canvas.canvas.removeEventListener('keydown', this.onKeyDown as EventListener);
         this.canvas.canvas.removeEventListener('keyup', this.onKeyUp as EventListener);
+
+        // Remove document-level capture listener
+        document.removeEventListener('keydown', this.onKeyDown as EventListener, { capture: true });
 
         window.removeEventListener('blur', this.onBlur);
         document.removeEventListener('paste', this.onPaste as unknown as EventListener);
@@ -695,6 +701,12 @@ export class CanvasInteractions {
                 case 'c':
                     if (this.canvas.canvasSelection.selectedLayers.length > 0) {
                         this.canvas.canvasLayers.copySelectedLayers();
+                    }
+                    break;
+                case 'v':
+                    // Paste layers from internal clipboard
+                    if (this.canvas.canvasLayers.internalClipboard.length > 0) {
+                        this.canvas.canvasLayers.pasteLayers();
                     }
                     break;
                 default:

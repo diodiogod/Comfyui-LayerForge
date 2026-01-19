@@ -1076,6 +1076,8 @@ app.registerExtension({
     },
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
         if (nodeType.comfyClass === "LayerForgeNode") {
+            // Map to track pending copy sources across node ID changes
+            const pendingCopySources = new Map();
             const onNodeCreated = nodeType.prototype.onNodeCreated;
             nodeType.prototype.onNodeCreated = function () {
                 log.debug("CanvasNode onNodeCreated: Base widget setup.");
@@ -1106,6 +1108,38 @@ app.registerExtension({
                 log.info(`Registered CanvasNode instance for ID: ${this.id}`);
                 // Store the canvas widget on the node
                 this.canvasWidget = canvasWidget;
+                // Check if this node has a pending copy source (from onConfigure)
+                // Check both the current ID and -1 (temporary ID during paste)
+                let sourceNodeId = pendingCopySources.get(this.id);
+                if (!sourceNodeId) {
+                    sourceNodeId = pendingCopySources.get(-1);
+                    if (sourceNodeId) {
+                        // Transfer from -1 to the real ID and clear -1
+                        pendingCopySources.delete(-1);
+                    }
+                }
+                if (sourceNodeId && sourceNodeId !== this.id) {
+                    log.info(`Node ${this.id} will copy canvas state from node ${sourceNodeId}`);
+                    // Clear the flag
+                    pendingCopySources.delete(this.id);
+                    // Copy the canvas state now that the widget is initialized
+                    setTimeout(async () => {
+                        try {
+                            const { getCanvasState, setCanvasState } = await import('./db.js');
+                            const sourceState = await getCanvasState(String(sourceNodeId));
+                            if (!sourceState) {
+                                log.debug(`No canvas state found for source node ${sourceNodeId}`);
+                                return;
+                            }
+                            await setCanvasState(String(this.id), sourceState);
+                            await canvasWidget.canvas.loadInitialState();
+                            log.info(`Canvas state copied successfully from node ${sourceNodeId} to node ${this.id}`);
+                        }
+                        catch (error) {
+                            log.error(`Error copying canvas state:`, error);
+                        }
+                    }, 100);
+                }
                 // Check if there are already connected inputs
                 setTimeout(() => {
                     if (this.inputs && this.inputs.length > 0) {
@@ -1270,6 +1304,31 @@ app.registerExtension({
                     this.canvasWidget.destroy();
                 }
                 return onRemoved?.apply(this, arguments);
+            };
+            // Handle copy/paste - save canvas state when copying
+            const originalSerialize = nodeType.prototype.serialize;
+            nodeType.prototype.serialize = function () {
+                const data = originalSerialize ? originalSerialize.apply(this) : {};
+                // Store a reference to the source node ID so we can copy layer data
+                data.sourceNodeId = this.id;
+                log.debug(`Serializing node ${this.id} for copy`);
+                return data;
+            };
+            // Handle copy/paste - load canvas state from source node when pasting
+            const originalConfigure = nodeType.prototype.onConfigure;
+            nodeType.prototype.onConfigure = async function (data) {
+                if (originalConfigure) {
+                    originalConfigure.apply(this, [data]);
+                }
+                // Store the source node ID in the map (persists across node ID changes)
+                // This will be picked up later in onAdded when the canvas widget is ready
+                if (data.sourceNodeId && data.sourceNodeId !== this.id) {
+                    const existingSource = pendingCopySources.get(this.id);
+                    if (!existingSource) {
+                        pendingCopySources.set(this.id, data.sourceNodeId);
+                        log.debug(`Stored pending copy source: ${data.sourceNodeId} for node ${this.id}`);
+                    }
+                }
             };
             const originalGetExtraMenuOptions = nodeType.prototype.getExtraMenuOptions;
             nodeType.prototype.getExtraMenuOptions = function (_, options) {

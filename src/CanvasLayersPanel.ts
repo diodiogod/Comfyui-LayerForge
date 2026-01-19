@@ -336,6 +336,8 @@ export class CanvasLayersPanel {
             if (nameElement && nameElement.classList.contains('editing')) {
                 return;
             }
+            // Prevent the layers panel from stealing focus
+            e.preventDefault();
             this.handleLayerClick(e, layer, index);
         });
 
@@ -383,10 +385,13 @@ export class CanvasLayersPanel {
         // Aktualizuj wewnętrzny stan zaznaczenia w obiekcie canvas
         // Ta funkcja NIE powinna już wywoływać onSelectionChanged w panelu.
         this.canvas.updateSelectionLogic(layer, isCtrlPressed, isShiftPressed, index);
-        
+
         // Aktualizuj tylko wygląd (klasy CSS), bez niszczenia DOM
         this.updateSelectionAppearance();
         this.updateButtonStates();
+
+        // Focus the canvas so keyboard shortcuts (like Ctrl+C/V) work for layer operations
+        this.canvas.canvas.focus();
 
         log.debug(`Layer clicked: ${layer.name}, selection count: ${this.canvas.canvasSelection.selectedLayers.length}`);
     }

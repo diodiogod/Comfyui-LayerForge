@@ -285,6 +285,8 @@ export class CanvasLayersPanel {
             if (nameElement && nameElement.classList.contains('editing')) {
                 return;
             }
+            // Prevent the layers panel from stealing focus
+            e.preventDefault();
             this.handleLayerClick(e, layer, index);
         });
         // --- PRAWY PRZYCISK: ODJAZNACZ LAYER ---
@@ -329,6 +331,8 @@ export class CanvasLayersPanel {
         // Aktualizuj tylko wygląd (klasy CSS), bez niszczenia DOM
         this.updateSelectionAppearance();
         this.updateButtonStates();
+        // Focus the canvas so keyboard shortcuts (like Ctrl+C/V) work for layer operations
+        this.canvas.canvas.focus();
         log.debug(`Layer clicked: ${layer.name}, selection count: ${this.canvas.canvasSelection.selectedLayers.length}`);
     }
     startEditingLayerName(nameElement, layer) {
