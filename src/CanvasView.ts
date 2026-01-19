@@ -1299,16 +1299,22 @@ app.registerExtension({
                     setTimeout(async () => {
                         try {
                             const { getCanvasState, setCanvasState } = await import('./db.js');
-                            const sourceState = await getCanvasState(String(sourceNodeId));
+                            let sourceState = await getCanvasState(String(sourceNodeId));
+
+                            // If source node doesn't exist (cross-workflow paste), try clipboard
+                            if (!sourceState) {
+                                log.debug(`No canvas state found for source node ${sourceNodeId}, checking clipboard`);
+                                sourceState = await getCanvasState('__clipboard__');
+                            }
 
                             if (!sourceState) {
-                                log.debug(`No canvas state found for source node ${sourceNodeId}`);
+                                log.debug(`No canvas state found in clipboard either`);
                                 return;
                             }
 
                             await setCanvasState(String(this.id), sourceState);
                             await canvasWidget.canvas.loadInitialState();
-                            log.info(`Canvas state copied successfully from node ${sourceNodeId} to node ${this.id}`);
+                            log.info(`Canvas state copied successfully to node ${this.id}`);
                         } catch (error) {
                             log.error(`Error copying canvas state:`, error);
                         }
@@ -1506,6 +1512,22 @@ app.registerExtension({
                 // Store a reference to the source node ID so we can copy layer data
                 data.sourceNodeId = this.id;
                 log.debug(`Serializing node ${this.id} for copy`);
+
+                // Store canvas state in a clipboard entry for cross-workflow paste
+                // This happens async but that's fine since paste happens later
+                (async () => {
+                    try {
+                        const { getCanvasState, setCanvasState } = await import('./db.js');
+                        const sourceState = await getCanvasState(String(this.id));
+                        if (sourceState) {
+                            // Store in a special "clipboard" entry
+                            await setCanvasState('__clipboard__', sourceState);
+                            log.debug(`Stored canvas state in clipboard for node ${this.id}`);
+                        }
+                    } catch (error) {
+                        log.error('Error storing canvas state to clipboard:', error);
+                    }
+                })();
 
                 return data;
             };
