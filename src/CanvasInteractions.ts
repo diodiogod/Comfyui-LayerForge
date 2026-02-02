@@ -704,8 +704,15 @@ export class CanvasInteractions {
                     }
                     break;
                 case 'v':
-                    // Paste from internal clipboard or system clipboard
-                    this.canvas.canvasLayers.handlePaste('mouse');
+                    // Only handle internal clipboard paste here.
+                    // If internal clipboard is empty, let the paste event bubble
+                    // so handlePasteEvent can access e.clipboardData for system images.
+                    if (this.canvas.canvasLayers.internalClipboard.length > 0) {
+                        this.canvas.canvasLayers.pasteLayers();
+                    } else {
+                        // Don't preventDefault - let paste event fire for system clipboard
+                        handled = false;
+                    }
                     break;
                 default:
                     handled = false;
