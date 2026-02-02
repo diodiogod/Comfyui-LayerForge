@@ -575,10 +575,8 @@ export class CanvasInteractions {
                     }
                     break;
                 case 'v':
-                    // Paste layers from internal clipboard
-                    if (this.canvas.canvasLayers.internalClipboard.length > 0) {
-                        this.canvas.canvasLayers.pasteLayers();
-                    }
+                    // Paste from internal clipboard or system clipboard
+                    this.canvas.canvasLayers.handlePaste('mouse');
                     break;
                 default:
                     handled = false;
