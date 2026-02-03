@@ -192,6 +192,12 @@ export class CanvasInteractions {
     }
     handleMouseDown(e) {
         this.canvas.canvas.focus();
+        // Sync modifier states with actual event state to prevent "stuck" modifiers
+        // when focus moves between layers panel and canvas
+        this.interaction.isCtrlPressed = e.ctrlKey;
+        this.interaction.isMetaPressed = e.metaKey;
+        this.interaction.isShiftPressed = e.shiftKey;
+        this.interaction.isAltPressed = e.altKey;
         const coords = this.getMouseCoordinates(e);
         const mods = this.getModifierState(e);
         if (this.interaction.mode === 'drawingMask') {
@@ -738,12 +744,11 @@ export class CanvasInteractions {
         if (mods.ctrl || mods.meta) {
             const index = this.canvas.canvasSelection.selectedLayers.indexOf(layer);
             if (index === -1) {
+                // Ctrl-clicking unselected layer: add to selection
                 this.canvas.canvasSelection.updateSelection([...this.canvas.canvasSelection.selectedLayers, layer]);
             }
-            else {
-                const newSelection = this.canvas.canvasSelection.selectedLayers.filter((l) => l !== layer);
-                this.canvas.canvasSelection.updateSelection(newSelection);
-            }
+            // If already selected, do NOT deselect - allows dragging multiple layers with Ctrl held
+            // User can use right-click in layers panel to deselect individual layers
         }
         else {
             if (!this.canvas.canvasSelection.selectedLayers.includes(layer)) {
