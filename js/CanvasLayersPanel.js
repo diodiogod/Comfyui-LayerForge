@@ -285,8 +285,6 @@ export class CanvasLayersPanel {
             if (nameElement && nameElement.classList.contains('editing')) {
                 return;
             }
-            // Prevent the layers panel from stealing focus
-            e.preventDefault();
             this.handleLayerClick(e, layer, index);
         });
         // --- PRAWY PRZYCISK: ODJAZNACZ LAYER ---
